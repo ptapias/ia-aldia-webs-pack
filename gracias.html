@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>¡Gracias! Tu pack está listo · IA al Día</title>
+<style>
+  :root{ --navy:#15214B; --blue:#0497E1; --blue2:#048BCD; --blue-soft:#4FB4EC; }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{ font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; background:var(--navy); color:#EDEFF5; min-height:100vh; display:flex; flex-direction:column; }
+  .serif{ font-family:"Baskerville","Hoefler Text",Georgia,serif; }
+  header{ padding:26px 0; }
+  .wrap{ max-width:640px; margin:0 auto; padding:0 26px; width:100%; }
+  .brand{ display:flex; align-items:center; gap:11px; }
+  .brand img{ height:28px; } .brand .wm{ font-weight:600; font-size:17px; } .brand .wm b{ color:var(--blue-soft); }
+  main{ flex:1; display:flex; align-items:center; }
+  .card{ text-align:center; padding:20px 0 40px; }
+  .tick{ width:66px; height:66px; border-radius:50%; background:rgba(4,151,225,.16); display:inline-flex; align-items:center; justify-content:center; margin-bottom:18px; }
+  h1{ font-size:40px; font-weight:400; letter-spacing:-.01em; color:#FBFBF9; }
+  h1 em{ font-style:italic; color:var(--blue-soft); }
+  .lede{ margin:18px auto 0; max-width:30em; font-size:16px; line-height:1.6; color:#C3C7D2; }
+  .btn{ display:inline-flex; align-items:center; gap:10px; margin-top:30px; background:var(--blue); color:#fff; font-size:17px; font-weight:700; text-decoration:none; padding:16px 30px; border-radius:12px; box-shadow:0 14px 34px rgba(4,151,225,.34); transition:background .15s; }
+  .btn:hover{ background:var(--blue2); }
+  .note{ margin-top:26px; font-size:14px; line-height:1.6; color:#9AA0AE; }
+  .note b{ color:#D7DAE2; }
+  .gift{ margin-top:28px; display:inline-block; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:16px 22px; font-size:14.5px; color:#DDE0E8; max-width:34em; }
+  .gift b{ color:#fff; }
+  footer{ padding:22px 0 34px; text-align:center; font-size:12px; color:#7E8494; }
+  footer a{ color:#9FB0D0; }
+</style>
+</head>
+<body>
+<header><div class="wrap brand"><img src="logo.png" alt="IA al Día"><span class="wm">IA al <b>Día</b></span></div></header>
+<main>
+  <div class="wrap card">
+    <span class="tick"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#0497E1" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg></span>
+    <h1 class="serif">¡Listo! Tu pack <em>ya es tuyo</em></h1>
+    <p class="lede">Gracias por suscribirte a IA al Día. Descárgalo aquí mismo — y te hemos enviado también una copia a tu correo.</p>
+
+    <a class="btn" href="pack.pdf" download>
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16"/></svg>
+      Descargar el pack (PDF)
+    </a>
+
+    <div class="gift">🎁 <b>Y esto es solo el principio:</b> en los próximos días te llegarán por correo <b>regalos sorpresa</b> extra — más prompts, plantillas y recursos que no comparto en ningún otro sitio.</div>
+
+    <p class="note">¿No ves el correo? Revisa <b>Promociones</b> o <b>Spam</b> y marca a IA al Día como «no es spam» para no perderte nada.</p>
+  </div>
+</main>
+<footer><div class="wrap">© 2026 IA al Día · <a href="https://www.ia-aldia.com">ia-aldia.com</a> · <a href="privacidad.html">Aviso de privacidad</a></div></footer>
+</body>
+</html>

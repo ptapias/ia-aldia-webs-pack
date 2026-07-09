@@ -153,9 +153,28 @@
       <!-- FORM (formulario nativo de Beehiiv, embebido) -->
       <div class="card">
         <h2 style="margin:0 0 14px;">Pon tu correo y te lo enviamos al instante 👇</h2>
-        <iframe class="bh" src="https://subscribe-forms.beehiiv.com/c3ed0a45-4627-4863-b047-b35e5508601f" title="Suscríbete a IA al Día" scrolling="no" loading="lazy"></iframe>
+        <iframe id="bhForm" class="bh" src="https://subscribe-forms.beehiiv.com/c3ed0a45-4627-4863-b047-b35e5508601f" title="Suscríbete a IA al Día" scrolling="no" loading="lazy"></iframe>
         <p class="fineprint">Recibirás el pack en tu correo en segundos. Te puedes dar de baja cuando quieras con un clic. Sin spam.</p>
       </div>
+      <script>
+        /* Handshake del embed de Beehiiv. Sin esto el iframe NO se redimensiona
+           (se queda en 250px sin scroll) y la confirmación de éxito queda
+           recortada e invisible. Aquí respondemos beehiiv:parent-loaded para
+           habilitar el auto-resize y ajustamos la altura del iframe. */
+        (function () {
+          var f = document.getElementById('bhForm');
+          if (!f) return;
+          window.addEventListener('message', function (e) {
+            if (e.source !== f.contentWindow || !e.data || !e.data.type) return;
+            if (e.data.type === 'beehiiv:child-loaded') {
+              f.contentWindow.postMessage({ type: 'beehiiv:parent-loaded' }, '*');
+            } else if (e.data.type === 'beehiiv:styles' || e.data.type === 'beehiiv:challenge') {
+              var h = e.data.payload && e.data.payload.height;
+              if (h) f.style.height = h;
+            }
+          });
+        })();
+      </script>
 
       <p class="trust">Únete a <b>+40.000 personas</b> que ya reciben IA al Día.</p>
     </div>

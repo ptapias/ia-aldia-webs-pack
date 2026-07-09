@@ -156,56 +156,101 @@
         <iframe id="bhForm" class="bh" src="https://subscribe-forms.beehiiv.com/c3ed0a45-4627-4863-b047-b35e5508601f" title="Suscríbete a IA al Día" scrolling="no" loading="lazy"></iframe>
         <p class="fineprint">Recibirás el pack en tu correo en segundos. Te puedes dar de baja cuando quieras con un clic. Sin spam.</p>
       </div>
+
+      <!-- Vía manual garantizada: aparece en cuanto el usuario toca el formulario.
+           Asegura la descarga aunque la auto-redirección fallara. -->
+      <p id="dl-fallback" style="display:none; margin:16px 0 0; font-size:14.5px; color:#C3C7D2;">
+        ¿Ya pusiste tu correo?
+        <a href="gracias.html" style="color:var(--blue-soft); font-weight:700; text-decoration:underline;">Abre aquí tu descarga →</a>
+      </p>
+
       <script>
         /* Handshake del embed de Beehiiv + redirección a gracias.html tras suscribirse.
-           1) Sin responder beehiiv:parent-loaded el iframe NO se redimensiona
-              (se queda en 250px sin scroll) y la confirmación queda recortada.
-           2) El iframe no emite ningún evento de "suscrito", pero su ResizeObserver
-              reenvía beehiiv:styles con la nueva altura cuando el formulario se
-              sustituye por el mensaje de éxito. Ese cambio de altura DESPUÉS de que
-              el usuario haya puesto el foco en el formulario es la señal de envío:
-              en ese momento llevamos la página completa a gracias.html (descarga).
-              El propio mensaje del iframe y el email quedan como respaldo. */
+           El iframe (cross-origin) no emite evento de "suscrito", pero su
+           ResizeObserver reenvía beehiiv:styles con una nueva altura cuando el
+           formulario se sustituye por el mensaje de éxito. Un cambio de altura
+           DESPUÉS de que el usuario haya tocado el formulario = envío → vamos a
+           gracias.html. Vías de respaldo: el enlace manual #dl-fallback (siempre),
+           el mensaje dentro del iframe y el email.
+           Con ?debug=1 se abre un panel que registra todos los eventos reales del
+           iframe y NO redirige, para diagnosticar sin adivinar. */
         (function () {
           var f = document.getElementById('bhForm');
           if (!f) return;
-          var baseH = null;        // altura del formulario en reposo (se calibra sola)
-          var interacted = false;  // el usuario ha entrado al formulario
-          var redirected = false;
-          var lastWinResize = 0;
-          window.addEventListener('resize', function () { lastWinResize = Date.now(); });
-          // Detección de foco en el iframe: blur del padre + sondeo (móvil/Safari)
+          var fallback = document.getElementById('dl-fallback');
+          var DEBUG = /[?&]debug=1/.test(location.search);
+          var GRACIAS = 'gracias.html';
+          var baseH = null, interacted = false, redirected = false, styleMsgs = 0;
+
+          /* ---- panel de depuración (solo con ?debug=1) ---- */
+          var log = [], pre = null;
+          function rec(m) {
+            var line = '[' + (performance.now() / 1000).toFixed(2) + 's] ' + m;
+            log.push(line);
+            if (pre) pre.textContent = log.join('\n');
+          }
+          if (DEBUG) {
+            var box = document.createElement('div');
+            box.style.cssText = 'position:fixed;left:0;right:0;bottom:0;max-height:46vh;overflow:auto;background:#0b1020;color:#9fe0ff;font:12px/1.45 ui-monospace,monospace;padding:10px 12px;z-index:99999;border-top:2px solid #0497E1;';
+            box.innerHTML = '<button id="bhcopy" style="float:right;font:12px monospace;padding:4px 10px;border-radius:6px;border:1px solid #0497E1;background:#0497E1;color:#fff;cursor:pointer;">copiar log</button><b style="color:#fff;">DEBUG · eventos del formulario Beehiiv</b><pre style="white-space:pre-wrap;word-break:break-word;margin:6px 0 0;"></pre>';
+            document.body.appendChild(box);
+            pre = box.querySelector('pre');
+            box.querySelector('#bhcopy').onclick = function () {
+              var t = log.join('\n');
+              (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject())
+                .then(function () { box.querySelector('#bhcopy').textContent = 'copiado ✓'; })
+                .catch(function () { var ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); box.querySelector('#bhcopy').textContent = 'copiado ✓'; });
+            };
+            rec('debug ON · ' + location.href);
+          }
+
+          function markInteracted(src) {
+            if (interacted) return;
+            interacted = true;
+            if (fallback) fallback.style.display = '';
+            rec('INTERACCIÓN (' + src + ') · baseH=' + baseH);
+          }
+          function goGracias(reason) {
+            if (redirected) return;
+            redirected = true;
+            rec('DETECCIÓN de envío → ' + reason);
+            if (DEBUG) { rec('(debug: no redirijo; en real iría a ' + GRACIAS + ')'); return; }
+            window.location.href = GRACIAS;
+          }
+
           window.addEventListener('blur', function () {
-            if (document.activeElement === f) interacted = true;
+            if (document.activeElement === f) markInteracted('blur');
           });
           setInterval(function () {
-            if (document.activeElement === f) interacted = true;
-          }, 400);
-          // Si vuelven con el botón atrás desde gracias.html, rearmar
+            if (document.activeElement === f) markInteracted('poll');
+          }, 300);
           window.addEventListener('pageshow', function (e) {
-            if (e.persisted) { redirected = false; interacted = false; baseH = null; }
+            if (e.persisted) { redirected = false; interacted = false; baseH = null; styleMsgs = 0; }
           });
+          f.addEventListener('load', function () { rec('iframe LOAD'); });
+
           window.addEventListener('message', function (e) {
-            if (e.source !== f.contentWindow || !e.data || !e.data.type) return;
-            if (e.data.type === 'beehiiv:child-loaded') {
+            var d = e.data;
+            if (!d || !d.type) return;
+            var fromForm = (e.source === f.contentWindow);
+            if (d.type === 'beehiiv:child-loaded') {
               f.contentWindow.postMessage({ type: 'beehiiv:parent-loaded' }, '*');
+              rec('child-loaded → parent-loaded');
               return;
             }
-            if (e.data.type !== 'beehiiv:styles' && e.data.type !== 'beehiiv:challenge') return;
-            var h = e.data.payload && e.data.payload.height;
-            if (h) f.style.height = h;
-            /* Un beehiiv:challenge es el captcha anti-bot, no un envío */
-            if (e.data.type !== 'beehiiv:styles') return;
-            var hpx = parseFloat(h);
-            if (!hpx) return;
-            if (!interacted) { baseH = hpx; return; }   // calibrando altura base
-            if (baseH === null) { baseH = hpx; return; }
-            if (redirected) return;
-            if (Date.now() - lastWinResize < 400) return; // reflow por resize de ventana
-            if (Math.abs(hpx - baseH) > 8) {              // contenido sustituido => enviado
-              redirected = true;
-              window.location.href = 'gracias.html';
+            if (d.type === 'beehiiv:styles' || d.type === 'beehiiv:challenge') {
+              var h = d.payload && d.payload.height;
+              if (h) f.style.height = h;
+              var hpx = parseFloat(h);
+              rec(d.type + ' h=' + h + (fromForm ? '' : ' [source≠iframe]'));
+              /* beehiiv:challenge = captcha anti-bot, no es un envío */
+              if (d.type !== 'beehiiv:styles' || !hpx) return;
+              styleMsgs++;
+              if (!interacted || baseH === null) { baseH = hpx; return; }  // calibrando
+              if (Math.abs(hpx - baseH) >= 12) goGracias('altura ' + baseH + '→' + hpx);
+              return;
             }
+            rec('msg ' + d.type + (fromForm ? '' : ' [source≠iframe]'));
           });
         })();
       </script>

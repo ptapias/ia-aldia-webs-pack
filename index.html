@@ -157,13 +157,6 @@
         <p class="fineprint">Recibirás el pack en tu correo en segundos. Te puedes dar de baja cuando quieras con un clic. Sin spam.</p>
       </div>
 
-      <!-- Vía manual garantizada: aparece en cuanto el usuario toca el formulario.
-           Asegura la descarga aunque la auto-redirección fallara. -->
-      <p id="dl-fallback" style="display:none; margin:16px 0 0; font-size:14.5px; color:#C3C7D2;">
-        ¿Ya pusiste tu correo?
-        <a href="gracias.html" style="color:var(--blue-soft); font-weight:700; text-decoration:underline;">Abre aquí tu descarga →</a>
-      </p>
-
       <script>
         /* Handshake del embed de Beehiiv + redirección a gracias.html tras suscribirse.
            SEÑAL DE ENVÍO (confirmada con datos reales del iframe): al suscribirse,
@@ -171,13 +164,12 @@
            (y 'beehiiv:success-toast'). Beehiiv muestra un TOAST flotante, no sustituye
            el formulario, por eso la altura NO cambia — hay que escuchar el evento, no
            medir alturas. En cuanto llega ese evento, llevamos la página completa a
-           gracias.html (descarga). Respaldo siempre disponible: el enlace manual
-           #dl-fallback (se revela al tocar el formulario) + el email.
+           gracias.html (descarga). El email es el respaldo (no hay enlace manual: el
+           acceso al pack exige suscribirse, para no perder la captura del correo).
            Con ?debug=1 se abre un panel que registra los eventos y NO redirige. */
         (function () {
           var f = document.getElementById('bhForm');
           if (!f) return;
-          var fallback = document.getElementById('dl-fallback');
           var DEBUG = /[?&]debug=1/.test(location.search);
           var GRACIAS = 'gracias.html';
           var BH_ORIGIN = 'https://subscribe-forms.beehiiv.com';
@@ -206,23 +198,14 @@
             rec('debug ON · ' + location.href);
           }
 
-          function revealFallback() { if (fallback) fallback.style.display = ''; }
           function goGracias(reason) {
             if (redirected) return;
             redirected = true;
-            revealFallback();  // por si el redirect tardara: el enlace ya está a la vista
             rec('DETECCIÓN de envío → ' + reason);
             if (DEBUG) { rec('(debug: no redirijo; en real iría a ' + GRACIAS + ')'); return; }
             window.location.href = GRACIAS;
           }
 
-          /* Revelar el enlace manual en cuanto el usuario entra al formulario */
-          window.addEventListener('blur', function () {
-            if (document.activeElement === f) revealFallback();
-          });
-          setInterval(function () {
-            if (document.activeElement === f) revealFallback();
-          }, 300);
           window.addEventListener('pageshow', function (e) {
             if (e.persisted) redirected = false;  // rearmar si vuelven con "atrás"
           });

@@ -3,6 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+  /* Frame-buster: si esta página se abre dentro de un iframe (el del formulario de
+     Beehiiv, que redirige aquí tras suscribirse), sal del iframe y ocupa toda la pestaña. */
+  (function () {
+    try {
+      if (window.top && window.top !== window.self) {
+        window.top.location.replace(window.location.href);
+      }
+    } catch (e) {
+      window.location.replace(window.location.href);
+    }
+  })();
+</script>
 <title>¡Gracias! Tu pack está listo · IA al Día</title>
 <style>
   :root{ --navy:#15214B; --blue:#0497E1; --blue2:#048BCD; --blue-soft:#4FB4EC; }

@@ -157,20 +157,54 @@
         <p class="fineprint">Recibirás el pack en tu correo en segundos. Te puedes dar de baja cuando quieras con un clic. Sin spam.</p>
       </div>
       <script>
-        /* Handshake del embed de Beehiiv. Sin esto el iframe NO se redimensiona
-           (se queda en 250px sin scroll) y la confirmación de éxito queda
-           recortada e invisible. Aquí respondemos beehiiv:parent-loaded para
-           habilitar el auto-resize y ajustamos la altura del iframe. */
+        /* Handshake del embed de Beehiiv + redirección a gracias.html tras suscribirse.
+           1) Sin responder beehiiv:parent-loaded el iframe NO se redimensiona
+              (se queda en 250px sin scroll) y la confirmación queda recortada.
+           2) El iframe no emite ningún evento de "suscrito", pero su ResizeObserver
+              reenvía beehiiv:styles con la nueva altura cuando el formulario se
+              sustituye por el mensaje de éxito. Ese cambio de altura DESPUÉS de que
+              el usuario haya puesto el foco en el formulario es la señal de envío:
+              en ese momento llevamos la página completa a gracias.html (descarga).
+              El propio mensaje del iframe y el email quedan como respaldo. */
         (function () {
           var f = document.getElementById('bhForm');
           if (!f) return;
+          var baseH = null;        // altura del formulario en reposo (se calibra sola)
+          var interacted = false;  // el usuario ha entrado al formulario
+          var redirected = false;
+          var lastWinResize = 0;
+          window.addEventListener('resize', function () { lastWinResize = Date.now(); });
+          // Detección de foco en el iframe: blur del padre + sondeo (móvil/Safari)
+          window.addEventListener('blur', function () {
+            if (document.activeElement === f) interacted = true;
+          });
+          setInterval(function () {
+            if (document.activeElement === f) interacted = true;
+          }, 400);
+          // Si vuelven con el botón atrás desde gracias.html, rearmar
+          window.addEventListener('pageshow', function (e) {
+            if (e.persisted) { redirected = false; interacted = false; baseH = null; }
+          });
           window.addEventListener('message', function (e) {
             if (e.source !== f.contentWindow || !e.data || !e.data.type) return;
             if (e.data.type === 'beehiiv:child-loaded') {
               f.contentWindow.postMessage({ type: 'beehiiv:parent-loaded' }, '*');
-            } else if (e.data.type === 'beehiiv:styles' || e.data.type === 'beehiiv:challenge') {
-              var h = e.data.payload && e.data.payload.height;
-              if (h) f.style.height = h;
+              return;
+            }
+            if (e.data.type !== 'beehiiv:styles' && e.data.type !== 'beehiiv:challenge') return;
+            var h = e.data.payload && e.data.payload.height;
+            if (h) f.style.height = h;
+            /* Un beehiiv:challenge es el captcha anti-bot, no un envío */
+            if (e.data.type !== 'beehiiv:styles') return;
+            var hpx = parseFloat(h);
+            if (!hpx) return;
+            if (!interacted) { baseH = hpx; return; }   // calibrando altura base
+            if (baseH === null) { baseH = hpx; return; }
+            if (redirected) return;
+            if (Date.now() - lastWinResize < 400) return; // reflow por resize de ventana
+            if (Math.abs(hpx - baseH) > 8) {              // contenido sustituido => enviado
+              redirected = true;
+              window.location.href = 'gracias.html';
             }
           });
         })();

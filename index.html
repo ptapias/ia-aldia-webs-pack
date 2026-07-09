@@ -166,21 +166,23 @@
 
       <script>
         /* Handshake del embed de Beehiiv + redirección a gracias.html tras suscribirse.
-           El iframe (cross-origin) no emite evento de "suscrito", pero su
-           ResizeObserver reenvía beehiiv:styles con una nueva altura cuando el
-           formulario se sustituye por el mensaje de éxito. Un cambio de altura
-           DESPUÉS de que el usuario haya tocado el formulario = envío → vamos a
-           gracias.html. Vías de respaldo: el enlace manual #dl-fallback (siempre),
-           el mensaje dentro del iframe y el email.
-           Con ?debug=1 se abre un panel que registra todos los eventos reales del
-           iframe y NO redirige, para diagnosticar sin adivinar. */
+           SEÑAL DE ENVÍO (confirmada con datos reales del iframe): al suscribirse,
+           el iframe emite por postMessage el evento 'BEEHIIV_SUBSCRIBER_FORM_SUBMITTED'
+           (y 'beehiiv:success-toast'). Beehiiv muestra un TOAST flotante, no sustituye
+           el formulario, por eso la altura NO cambia — hay que escuchar el evento, no
+           medir alturas. En cuanto llega ese evento, llevamos la página completa a
+           gracias.html (descarga). Respaldo siempre disponible: el enlace manual
+           #dl-fallback (se revela al tocar el formulario) + el email.
+           Con ?debug=1 se abre un panel que registra los eventos y NO redirige. */
         (function () {
           var f = document.getElementById('bhForm');
           if (!f) return;
           var fallback = document.getElementById('dl-fallback');
           var DEBUG = /[?&]debug=1/.test(location.search);
           var GRACIAS = 'gracias.html';
-          var baseH = null, interacted = false, redirected = false, styleMsgs = 0;
+          var BH_ORIGIN = 'https://subscribe-forms.beehiiv.com';
+          var SUBMIT_EVENTS = ['BEEHIIV_SUBSCRIBER_FORM_SUBMITTED', 'beehiiv:success-toast', 'beehiiv:subscribe-success'];
+          var redirected = false;
 
           /* ---- panel de depuración (solo con ?debug=1) ---- */
           var log = [], pre = null;
@@ -204,53 +206,54 @@
             rec('debug ON · ' + location.href);
           }
 
-          function markInteracted(src) {
-            if (interacted) return;
-            interacted = true;
-            if (fallback) fallback.style.display = '';
-            rec('INTERACCIÓN (' + src + ') · baseH=' + baseH);
-          }
+          function revealFallback() { if (fallback) fallback.style.display = ''; }
           function goGracias(reason) {
             if (redirected) return;
             redirected = true;
+            revealFallback();  // por si el redirect tardara: el enlace ya está a la vista
             rec('DETECCIÓN de envío → ' + reason);
             if (DEBUG) { rec('(debug: no redirijo; en real iría a ' + GRACIAS + ')'); return; }
             window.location.href = GRACIAS;
           }
 
+          /* Revelar el enlace manual en cuanto el usuario entra al formulario */
           window.addEventListener('blur', function () {
-            if (document.activeElement === f) markInteracted('blur');
+            if (document.activeElement === f) revealFallback();
           });
           setInterval(function () {
-            if (document.activeElement === f) markInteracted('poll');
+            if (document.activeElement === f) revealFallback();
           }, 300);
           window.addEventListener('pageshow', function (e) {
-            if (e.persisted) { redirected = false; interacted = false; baseH = null; styleMsgs = 0; }
+            if (e.persisted) redirected = false;  // rearmar si vuelven con "atrás"
           });
           f.addEventListener('load', function () { rec('iframe LOAD'); });
 
           window.addEventListener('message', function (e) {
             var d = e.data;
-            if (!d || !d.type) return;
-            var fromForm = (e.source === f.contentWindow);
-            if (d.type === 'beehiiv:child-loaded') {
+            if (!d) return;
+            var type = (typeof d === 'string') ? d : d.type;
+            if (!type) return;
+            var fromBH = (e.origin === BH_ORIGIN);
+
+            /* Handshake de auto-redimensionado del iframe */
+            if (type === 'beehiiv:child-loaded') {
               f.contentWindow.postMessage({ type: 'beehiiv:parent-loaded' }, '*');
               rec('child-loaded → parent-loaded');
               return;
             }
-            if (d.type === 'beehiiv:styles' || d.type === 'beehiiv:challenge') {
+            if (type === 'beehiiv:styles' || type === 'beehiiv:challenge') {
               var h = d.payload && d.payload.height;
               if (h) f.style.height = h;
-              var hpx = parseFloat(h);
-              rec(d.type + ' h=' + h + (fromForm ? '' : ' [source≠iframe]'));
-              /* beehiiv:challenge = captcha anti-bot, no es un envío */
-              if (d.type !== 'beehiiv:styles' || !hpx) return;
-              styleMsgs++;
-              if (!interacted || baseH === null) { baseH = hpx; return; }  // calibrando
-              if (Math.abs(hpx - baseH) >= 12) goGracias('altura ' + baseH + '→' + hpx);
+              rec(type + ' h=' + h + (fromBH ? '' : ' [origin≠bh]'));
               return;
             }
-            rec('msg ' + d.type + (fromForm ? '' : ' [source≠iframe]'));
+            /* Evento explícito de suscripción realizada → a la descarga */
+            if (SUBMIT_EVENTS.indexOf(type) !== -1) {
+              rec('EVENTO éxito: ' + type + (fromBH ? '' : ' [origin≠bh]'));
+              goGracias(type);
+              return;
+            }
+            rec('msg ' + type + (fromBH ? '' : ' [origin≠bh]'));
           });
         })();
       </script>
